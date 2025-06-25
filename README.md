@@ -8,3 +8,6 @@ social Media Analysis
 The Social Media Analysis project aims to gain comprehensive insights into user behavior, sentiment, and trending topics by analyzing social media data. SQL queries will extract valuable data from the dataset, assisting in brand reputation management and marketing strategies.
 SQL Queries for Analysis
 SQL queries are vital in extracting meaningful insights from social media data. Queries can filter data based on specific criteria, calculate engagement metrics, analyze sentiment, and identify popular topics. Additionally, SQL allows tracking user interactions and performing network analysis to understand user connections and influence.
+# Resume Builder
+A resume builder is an online tool that helps individuals create professional resumes quickly and efficiently. These tools provide pre-formatted templates and suggested content to save time and effort, allowing users to customize their resumes to fit their specific needs.
+This Web tool has been created using html,css,java script.
