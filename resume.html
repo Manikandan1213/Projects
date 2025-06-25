@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.20.15/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useRef } = React;
+
+    const LoginPage = ({ onLogin }) => {
+      const [credentials, setCredentials] = useState({
+        username: '',
+        password: ''
+      });
+      const [error, setError] = useState('');
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (credentials.username === 'admin' && credentials.password === 'password123') {
+          onLogin();
+        } else {
+          setError('Invalid username or password');
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+            <h1 className="text-2xl font-bold text-center mb-6">Login to Resume Builder</h1>
+            {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
+            <form onSubmit={handleSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={credentials.username}
+                  onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input
+                  type="password"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials({...credentials, password: e.target.value})}
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition"
+              >
+                Login
+              </button>
+            </form>
+            <div className="mt-4 text-center text-sm text-gray-600">
+              Demo credentials: admin / password123
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const ResumeBuilder = () => {
+      const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        summary: '',
+        education: [{ institution: '', degree: '', year: '' }],
+        experience: [{ company: '', role: '', duration: '', description: '' }],
+        certifications: [{ title: '', issuer: '', year: '' }],
+        skills: [''],
+      });
+      const [errors, setErrors] = useState({});
+      const resumeRef = useRef(null);
+
+      const validateForm = () => {
+        const newErrors = {};
+        if (!formData.name.trim()) newErrors.name = 'Name is required';
+        if (!formData.email.trim()) newErrors.email = 'Email is required';
+        else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Invalid email format';
+        if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+      };
+
+      const handleInputChange = (e, section, index, field) => {
+        const newFormData = { ...formData };
+        if (section === 'personal') {
+          newFormData[field] = e.target.value;
+        } else if (section === 'skills') {
+          newFormData.skills[index] = e.target.value;
+        } else {
+          newFormData[section][index][field] = e.target.value;
+        }
+        setFormData(newFormData);
+        // Clear error for the field being edited
+        setErrors((prev) => ({ ...prev, [field]: '' }));
+      };
+
+      const addSection = (section) => {
+        const newFormData = { ...formData };
+        if (section === 'skills') {
+          newFormData.skills.push('');
+        } else if (section === 'certifications') {
+          newFormData[section].push({ title: '', issuer: '', year: '' });
+        } else {
+          newFormData[section].push(
+            section === 'education'
+              ? { institution: '', degree: '', year: '' }
+              : { company: '', role: '', duration: '', description: '' }
+          );
+        }
+        setFormData(newFormData);
+      };
+
+      const removeSection = (section, index) => {
+        const newFormData = { ...formData };
+        if (newFormData[section].length > 1) {
+          newFormData[section].splice(index, 1);
+          setFormData(newFormData);
+        }
+      };
+
+      const downloadPDF = () => {
+        if (!validateForm()) {
+          alert('Please fill in all required fields correctly before downloading.');
+          return;
+        }
+        const element = resumeRef.current;
+        const opt = {
+          margin: 0.5,
+          filename: `${formData.name || 'resume'}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+      };
+
+      return (
+        <div className="container mx-auto p-4 max-w-6xl">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Resume Builder</h1>
+            <button
+              onClick={downloadPDF}
+              className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition"
+            >
+              Download PDF
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Input Form */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">Personal Information</h2>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Name *</label>
+                <input
+                  type="text"
+                  className={`mt-1 p-2 w-full border rounded-md ${errors.name ? 'border-red-500' : ''}`}
+                  value={formData.name}
+                  onChange={(e) => handleInputChange(e, 'personal', null, 'name')}
+                />
+                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Email *</label>
+                <input
+                  type="email"
+                  className={`mt-1 p-2 w-full border rounded-md ${errors.email ? 'border-red-500' : ''}`}
+                  value={formData.email}
+                  onChange={(e) => handleInputChange(e, 'personal', null, 'email')}
+                />
+                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Phone *</label>
+                <input
+                  type="tel"
+                  className={`mt-1 p-2 w-full border rounded-md ${errors.phone ? 'border-red-500' : ''}`}
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange(e, 'personal', null, 'phone')}
+                />
+                {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700">Professional Summary</label>
+                <textarea
+                  className="mt-1 p-2 w-full border rounded-md"
+                  value={formData.summary}
+                  onChange={(e) => handleInputChange(e, 'personal', null, 'summary')}
+                  placeholder="Brief summary of your professional background"
+                  rows="4"
+                />
+              </div>
+
+              <h2 className="text-xl font-semibold mb-4">Education</h2>
+              {formData.education.map((edu, index) => (
+                <div key={index} className="mb-4 border-b pb-4">
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Institution"
+                    value={edu.institution}
+                    onChange={(e) => handleInputChange(e, 'education', index, 'institution')}
+                  />
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Degree"
+                    value={edu.degree}
+                    onChange={(e) => handleInputChange(e, 'education', index, 'degree')}
+                  />
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Year"
+                    value={edu.year}
+                    onChange={(e) => handleInputChange(e, 'education', index, 'year')}
+                  />
+                  {formData.education.length > 1 && (
+                    <button
+                      className="text-red-500 text-sm"
+                      onClick={() => removeSection('education', index)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4"
+                onClick={() => addSection('education')}
+              >
+                Add Education
+              </button>
+
+              <h2 className="text-xl font-semibold mb-4">Experience</h2>
+              {formData.experience.map((exp, index) => (
+                <div key={index} className="mb-4 border-b pb-4">
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Company"
+                    value={exp.company}
+                    onChange={(e) => handleInputChange(e, 'experience', index, 'company')}
+                  />
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Role"
+                    value={exp.role}
+                    onChange={(e) => handleInputChange(e, 'experience', index, 'role')}
+                  />
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Duration (e.g., Jan 2020 - Dec 2022)"
+                    value={exp.duration}
+                    onChange={(e) => handleInputChange(e, 'experience', index, 'duration')}
+                  />
+                  <textarea
+                    className="mt-1 p-2 w-full border rounded-md"
+                    placeholder="Description"
+                    value={exp.description}
+                    onChange={(e) => handleInputChange(e, 'experience', index, 'description')}
+                    rows="3"
+                  />
+                  {formData.experience.length > 1 && (
+                    <button
+                      className="text-red-500 text-sm"
+                      onClick={() => removeSection('experience', index)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4"
+                onClick={() => addSection('experience')}
+              >
+                Add Experience
+              </button>
+
+              <h2 className="text-xl font-semibold mb-4">Certifications</h2>
+              {formData.certifications.map((cert, index) => (
+                <div key={index} className="mb-4 border-b pb-4">
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Certification Title"
+                    value={cert.title}
+                    onChange={(e) => handleInputChange(e, 'certifications', index, 'title')}
+                  />
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Issuer"
+                    value={cert.issuer}
+                    onChange={(e) => handleInputChange(e, 'certifications', index, 'issuer')}
+                  />
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md mb-2"
+                    placeholder="Year"
+                    value={cert.year}
+                    onChange={(e) => handleInputChange(e, 'certifications', index, 'year')}
+                  />
+                  {formData.certifications.length > 1 && (
+                    <button
+                      className="text-red-500 text-sm"
+                      onClick={() => removeSection('certifications', index)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-md mb-4"
+                onClick={() => addSection('certifications')}
+              >
+                Add Certification
+              </button>
+
+              <h2 className="text-xl font-semibold mb-4">Skills</h2>
+              {formData.skills.map((skill, index) => (
+                <div key={index} className="mb-4 flex items-center">
+                  <input
+                    type="text"
+                    className="mt-1 p-2 w-full border rounded-md"
+                    placeholder="Skill"
+                    value={skill}
+                    onChange={(e) => handleInputChange(e, 'skills', index)}
+                  />
+                  {formData.skills.length > 1 && (
+                    <button
+                      className="text-red-500 text-sm ml-2"
+                      onClick={() => removeSection('skills', index)}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                className="bg-blue-500 text-white px-4 py-2 rounded-md"
+                onClick={() => addSection('skills')}
+              >
+                Add Skill
+              </button>
+            </div>
+
+            {/* Resume Preview */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">Resume Preview</h2>
+              <div ref={resumeRef} className="border p-6 rounded-md bg-white">
+                <div className="text-center mb-4">
+                  <h3 className="text-3xl font-bold text-gray-800">{formData.name || 'Your Name'}</h3>
+                  <p className="text-gray-600 text-sm">
+                    {formData.email || 'email@example.com'} | {formData.phone || '123-456-7890'}
+                  </p>
+                </div>
+                {formData.summary && (
+                  <>
+                    <h4 className="text-lg font-semibold text-gray-700 border-b pb-1 mb-3">Professional Summary</h4>
+                    <p className="text-gray-600 mb-4">{formData.summary}</p>
+                  </>
+                )}
+                <h4 className="text-lg font-semibold text-gray-700 border-b pb-1 mb-3">Education</h4>
+                {formData.education.map((edu, index) => (
+                  <div key={index} className="mb-3">
+                    <p className="font-medium text-gray-800">{edu.institution || 'Institution'}</p>
+                    <p className="text-gray-600">{edu.degree || 'Degree'} - {edu.year || 'Year'}</p>
+                  </div>
+                ))}
+                <h4 className="text-lg font-semibold text-gray-700 border-b pb-1 mb-3 mt-4">Experience</h4>
+                {formData.experience.map((exp, index) => (
+                  <div key={index} className="mb-3">
+                    <p className="font-medium text-gray-800">{exp.company || 'Company'}</p>
+                    <p className="text-gray-600">{exp.role || 'Role'} | {exp.duration || 'Duration'}</p>
+                    <p className="text-gray-600 text-sm mt-1">{exp.description || 'Description'}</p>
+                  </div>
+                ))}
+                <h4 className="text-lg font-semibold text-gray-700 border-b pb-1 mb-3 mt-4">Certifications</h4>
+                {formData.certifications.map((cert, index) => (
+                  <div key={index} className="mb-3">
+                    <p className="font-medium text-gray-800">{cert.title || 'Certification Title'}</p>
+                    <p className="text-gray-600">{cert.issuer || 'Issuer'} - {cert.year || 'Year'}</p>
+                  </div>
+                ))}
+                <h4 className="text-lg font-semibold text-gray-700 border-b pb-1 mb-3 mt-4">Skills</h4>
+                <div className="flex flex-wrap gap-2">
+                  {formData.skills.map((skill, index) => (
+                    <span key={index} className="bg-gray-100 text-gray-800 text-sm px-3 py-1 rounded-full">
+                      {skill || 'Skill'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const App = () => {
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+      return (
+        <>
+          {!isLoggedIn ? (
+            <LoginPage onLogin={() => setIsLoggedIn(true)} />
+          ) : (
+            <>
+              <div className="bg-blue-500 text-white p-4 flex justify-between items-center">
+                <h1 className="text-xl font-bold">Resume Builder</h1>
+                <button 
+                  onClick={() => setIsLoggedIn(false)}
+                  className="bg-white text-blue-500 px-4 py-1 rounded-md hover:bg-gray-100 transition"
+                >
+                  Logout
+                </button>
+              </div>
+              <ResumeBuilder />
+            </>
+          )}
+        </>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
